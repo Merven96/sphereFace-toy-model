@@ -11,7 +11,7 @@ import time
 import matplotlib.pyplot as plt
 import zipfile
 import cv2
-from matlab_cp2tform import get_similarity_transform_for_cv2
+# from matlab_cp2tform import get_similarity_transform_for_cv2
 
 class ImageDataset(Dataset):
     def __init__(self, root, lr_transforms=None, hr_transforms=None):
@@ -40,15 +40,16 @@ class FeatureDataset(Dataset):
         self.data_num = len(input_list)
 
     def __getitem__(self, index):
-        input_feature = self.input_data[index % self.data_num]
-        label_feature = self.label_data[index % self.data_num]
+        input_feature = self.input_data[index % self.data_num, :]
+        label_feature = self.label_data[index % self.data_num, :]
+        # print("test in dataLoader")
+        # print(input_feature, np.shape(input_feature))
+        input_feature = np.expand_dims(input_feature, axis=0)
+        # print(input_feature, np.shape(input_feature))
         return input_feature, label_feature
 
     def __len__(self):
         return self.data_num
-
-
-
 
 
 

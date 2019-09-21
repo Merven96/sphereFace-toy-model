@@ -96,13 +96,13 @@ class transform_net(nn.Module):
     def __init__(self, f_dimension, mid_dimension, mid_num):
         super(transform_net, self).__init__()
         self.fc1 = nn.Sequential(nn.Linear(f_dimension, mid_dimension),
-                                 nn.Relu(True))
+                                 nn.ReLU(True))
         fc_mid = []
         for mid_layer in range(mid_num-1):
             if mid_layer == mid_num-2:
                 fc_mid += [nn.Linear(mid_dimension, f_dimension)]  # 本任务中，最后一层无需激活函数
             else:
-                fc_mid += [nn.Linear(mid_dimension, mid_dimension), nn.Relu(True)]
+                fc_mid += [nn.Linear(mid_dimension, mid_dimension), nn.ReLU(True)]
         self.fc_list = nn.Sequential(*fc_mid)
 
     def forward(self, x):
