@@ -126,21 +126,8 @@ for i in range(batch_num):
     for j in range(args.batch_size):
         line = landmark_lines[i*args.batch_size + j]
         filename = args.dataset + ":" + line
-        # print("test:")
-        # print(filename)
         img_numpy, _ = dataset_load(filename, zfile)
 
-        # l = line.split('_')
-        # person_name = l[:-1]
-        # # 从图片名中恢复出文件夹名(人名)
-        # dir_name = person_name[0]
-        # if len(person_name)>1:
-        #     for kk in range(1, len(person_name)):
-        #         dir_name = dir_name + '_' + person_name[kk]
-        # dir_name = dir_name + "/"
-        # img = cv2.imdecode(np.frombuffer(zfile.read(dir_name + line),np.uint8),1)
-        # img = img.transpose(2, 0, 1).reshape((1,3,np.shape(img)[0], np.shape(img)[1]))
-        # img = (img - 127.5)/128.0
 
         img_batch.append(img_numpy)
 

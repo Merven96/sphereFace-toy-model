@@ -13,17 +13,20 @@ from net_sphere_toy import transform_net
 
 def parameter():
     parser = argparse.ArgumentParser(description="Transformer")
-    parser.add_argument('--train_data_mat', type=str, default="./toy_feature_train_lr.mat")
-    parser.add_argument('--label_data_mat', type=str, default="./toy_feature_train.mat")
+    parser.add_argument('--train_data_mat', type=str, default="./mat_file/train_without_test/toy_feature_train.mat")
+    parser.add_argument('--label_data_mat', type=str, default="./mat_file/train_without_test/toy_feature_train_lr.mat")
     parser.add_argument('--use_gpu', type=str, default='0')
-    parser.add_argument('--batch_size', type=int, default=43)
+    parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--epoch_num', type=int, default=10)
     parser.add_argument('--learning_rate', type=float, default=0.01)
     parser.add_argument('--mid_num', type=int, default=4)
     parser.add_argument('--mid_dimen', type=int, default=4)
+
+    parser.add_argument('--test_input_mat', type=str, default=None)
+    parser.add_argument('--test_label_mat', type=str, default=None)
     return parser
 
-def train(train_data_mat, label_data_mat, net, batch_size, epoch_num, lr=0.001):
+def train(train_data_mat, label_data_mat, net, batch_size, epoch_num, lr=0.001, test_input=None, test_label=None):
     dataset = FeatureDataset(train_data_mat, label_data_mat)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=1)
     net.train()
@@ -34,6 +37,11 @@ def train(train_data_mat, label_data_mat, net, batch_size, epoch_num, lr=0.001):
     data_num = np.shape(train_data_mat)[0]
     batch_num = int(data_num / batch_size)
 
+    if test_input is not None and test_label is not None:
+        test_input = torch.autograd.Variable(torch.from_numpy(test_input))
+        test_label = torch.autograd.Variable(torch.from_numpy(test_label))
+        
+
     for epoch in range(epoch_num):
         train_data, label_data = combine_and_shuffle(train_data_mat, label_data_mat)
 
@@ -42,19 +50,41 @@ def train(train_data_mat, label_data_mat, net, batch_size, epoch_num, lr=0.001):
             optimizer = torch.optim.Adam(net.parameters(), lr=lr)
 
         for i in range(batch_num):
-            train_batch = torch.autograd.Variable(torch.from_numpy(train_data[i*batch_size:i*batch_size + batch_size, :]))
-            label_batch = torch.autograd.Variable(torch.from_numpy(label_data[i*batch_size:i*batch_size + batch_size, :]))
+            batch_end = i*batch_size + batch_size
+            if batch_end < train_data.shape[0]:
+                train_batch = torch.autograd.Variable(torch.from_numpy(train_data[i*batch_size:i*batch_size + batch_size, :]))
+                label_batch = torch.autograd.Variable(torch.from_numpy(label_data[i*batch_size:i*batch_size + batch_size, :]))
+            else:
+                train_batch = torch.autograd.Variable(torch.from_numpy(train_data[i*batch_size:, :]))
+                label_batch = torch.autograd.Variable(torch.from_numpy(label_data[i*batch_size:, :]))
+
             output_batch = net(train_batch)
             train_loss = loss_fn(label_batch.float(),\
                                  output_batch.float())
-            # print("test:", type(output_batch), output_batch.size())
+
             optimizer.zero_grad()
             train_loss.backward()
             optimizer.step()
+
             if(epoch==0 and i==0):
                 print("start loss: {}".format(train_loss.item()))
-        print("{}-epoch / {}: {}".format\
-                    (epoch, epoch_num, train_loss.item()))
+                if test_input is not None and test_label is not None:
+                    test_output = net(test_input)
+                    test_loss = loss_fn(test_output.float(), \
+                                        test_label.float())        
+                    print("start test-loss: {}".format(test_loss.item()))
+
+        if test_input is not None and test_label is not None:
+                test_output = net(test_input)
+                test_loss = loss_fn(test_output.float(), \
+                                    test_label.float())        
+                print("{}-epoch / {} train_loss: {}  ; test-loss: {}".\
+                        format(epoch, epoch_num, train_loss.item(),\
+                               test_loss.item()))
+        else:
+            print("{}-epoch / {} train_loss: {}".format\
+                        (epoch, epoch_num, train_loss.item()))
+            
     return net
 
 
@@ -82,16 +112,21 @@ if __name__ == "__main__":
 
     train_data = io.loadmat(args.train_data_mat)
     train_data = train_data['name']
-    test_data = io.loadmat(args.label_data_mat)
-    test_data = test_data['name']
-    print(type(train_data), np.shape(train_data))
-    print(type(test_data), np.shape(test_data))
+    label_data = io.loadmat(args.label_data_mat)
+    label_data = label_data['name']
+    print("training-data:", np.shape(train_data), np.shape(label_data))
+
+    if(args.test_input_mat is not None):
+        test_input = io.loadmat(args.test_input_mat)
+        test_input = test_input['name']
+        test_label = io.loadmat(args.test_label_mat)
+        test_label = test_label['name']
+        print("testing-data:", np.shape(test_input), np.shape(test_label))
 
     net = transform_net(f_dimension=2, \
             mid_dimension=args.mid_dimen, mid_num=args.mid_num)
-    net = train(train_data, test_data, net, args.batch_size, args.epoch_num, args.learning_rate)
+    net = train(train_data, label_data, net, args.batch_size, args.epoch_num, args.learning_rate, test_input, test_label)
 
-    save_model(net, 'transform_{}-midNum_{}-midDimen.pth'\
+    save_model(net, 'transform_{}-midNum_{}-midDimen_v2.pth'\
                     .format(args.mid_num, args.mid_dimen))
-
 
