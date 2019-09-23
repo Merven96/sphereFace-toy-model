@@ -27,8 +27,8 @@ def parameter():
     return parser
 
 def train(train_data_mat, label_data_mat, net, batch_size, epoch_num, lr=0.001, test_input=None, test_label=None):
-    dataset = FeatureDataset(train_data_mat, label_data_mat)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=1)
+    # dataset = FeatureDataset(train_data_mat, label_data_mat)
+    # dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=1)
     net.train()
     loss_fn = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(net.parameters(), lr=lr)
