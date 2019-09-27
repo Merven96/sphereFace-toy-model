@@ -111,6 +111,60 @@ class transform_net(nn.Module):
         return x
             
 
+class conv_transform_net(nn.Module):
+    def __init__(self, f_dimension, seq_length=0,  mid_dimension=None, mid_num=None):
+        super(conv_transform_net, self).__init__()
+        self.feature_dimension = f_dimension
+        self.seq_length = seq_length
+        self.conv1 = nn.Conv1d(in_channels=1, out_channels=3, kernel_size=3, padding=1)
+        self.relu1 = nn.ReLU(True)
+
+        self.conv2 = nn.Conv1d(in_channels=3, out_channels=3, kernel_size=3, padding=1)
+        self.relu2 = nn.ReLU(True)
+
+        self.conv3 = nn.Conv1d(in_channels=3, out_channels=3, kernel_size=5, padding=2)
+        # self.conv3 = nn.Conv1d(in_channels=3, out_channels=3, kernel_size=3, padding=1)
+        self.relu3 = nn.ReLU(True)
+
+        self.conv4 = nn.Conv1d(in_channels=3, out_channels=3, kernel_size=5, padding=2)
+        # self.conv4 = nn.Conv1d(in_channels=3, out_channels=3, kernel_size=3, padding=1)
+        self.relu4 = nn.ReLU(True)
+
+        if seq_length > 0:
+            self.conv_seq = []
+            for i in range(seq_length-1):
+                if i==0:
+                    self.conv_seq += \
+                       [nn.Conv1d(in_channels= 3, out_channels=9,\
+                               kernel_size=5, padding=2), nn.ReLU(True)]
+                else:
+                    self.conv_seq += \
+                        [nn.Conv1d(in_channels=9, out_channels=9,\
+                               kernel_size=5, padding=2), nn.ReLU(True)]
+            self.conv_seq += [nn.Conv1d(in_channels=9, out_channels=3,\
+                               kernel_size=5, padding=2), nn.ReLU(True)]
+            self.conv_seq = nn.Sequential(*self.conv_seq)
+        else:
+            self.conv_seq = None
+
+        self.fc1 = nn.Sequential(nn.Linear(3*f_dimension, f_dimension),\
+                                 nn.ReLU(True))
+        self.fc_final = nn.Linear(f_dimension, f_dimension)
+
+    def forward(self, x):
+        x = self.relu1(self.conv1(x))
+        x = self.relu2(self.conv2(x))
+        x = self.relu3(self.conv3(x))
+        x = self.relu4(self.conv4(x))
+        if self.conv_seq is not None:
+            x = self.conv_seq(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc1(x)
+        x = self.fc_final(x)
+        return x
+
+
+
 class sphere20a(nn.Module):
     def __init__(self,classnum=10,feature=False):
         super(sphere20a, self).__init__()

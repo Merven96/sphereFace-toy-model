@@ -8,13 +8,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-from feature_dataloader import FeatureDataset
+# from feature_dataloader import FeatureDataset
 from net_sphere_toy import transform_net
+from net_sphere_toy import conv_transform_net
 
 def parameter():
     parser = argparse.ArgumentParser(description="Transformer")
-    parser.add_argument('--train_data_mat', type=str, default="./mat_file/train_without_test/toy_feature_train.mat")
-    parser.add_argument('--label_data_mat', type=str, default="./mat_file/train_without_test/toy_feature_train_lr.mat")
+    parser.add_argument('--train_data_mat', type=str, default="./mat_file/toy_model/train_without_test/toy_feature_train.mat")
+    parser.add_argument('--label_data_mat', type=str, default="./mat_file/toy_model/train_without_test/toy_feature_train_lr.mat")
     parser.add_argument('--use_gpu', type=str, default='0')
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--epoch_num', type=int, default=10)
@@ -24,14 +25,24 @@ def parameter():
 
     parser.add_argument('--test_input_mat', type=str, default=None)
     parser.add_argument('--test_label_mat', type=str, default=None)
+    parser.add_argument('--whether_save', type=bool, default=False)
+    parser.add_argument('--saving_title', type=str, default="")
+    
+    parser.add_argument('--type', type=str, default='fc')
+    parser.add_argument('--seq_length', type=int, default=0)
     return parser
 
 def train(train_data_mat, label_data_mat, net, batch_size, epoch_num, lr=0.001, test_input=None, test_label=None):
-    # dataset = FeatureDataset(train_data_mat, label_data_mat)
-    # dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=1)
-    net.train()
     loss_fn = torch.nn.MSELoss()
+    # loss_fn = torch.nn.MSELoss(size_average=False)
     optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+
+    cuda = True if torch.cuda.is_available() else False
+    if cuda:
+        net = net.cuda()
+        # optimizer = optimizer.cuda()
+
+    net.train()
     train_loss = 0
 
     data_num = np.shape(train_data_mat)[0]
@@ -57,6 +68,9 @@ def train(train_data_mat, label_data_mat, net, batch_size, epoch_num, lr=0.001, 
             else:
                 train_batch = torch.autograd.Variable(torch.from_numpy(train_data[i*batch_size:, :]))
                 label_batch = torch.autograd.Variable(torch.from_numpy(label_data[i*batch_size:, :]))
+            if cuda:
+                train_batch = train_batch.cuda()
+                label_batch = label_batch.cuda()
 
             output_batch = net(train_batch)
             train_loss = loss_fn(label_batch.float(),\
@@ -69,6 +83,9 @@ def train(train_data_mat, label_data_mat, net, batch_size, epoch_num, lr=0.001, 
             if(epoch==0 and i==0):
                 print("start loss: {}".format(train_loss.item()))
                 if test_input is not None and test_label is not None:
+                    if cuda:
+                        test_input = test_input.cuda()
+                        test_label = test_label.cuda()
                     test_output = net(test_input)
                     test_loss = loss_fn(test_output.float(), \
                                         test_label.float())        
@@ -122,11 +139,35 @@ if __name__ == "__main__":
         test_label = io.loadmat(args.test_label_mat)
         test_label = test_label['name']
         print("testing-data:", np.shape(test_input), np.shape(test_label))
+    else:
+        test_input = None
+        test_label = None
 
-    net = transform_net(f_dimension=2, \
-            mid_dimension=args.mid_dimen, mid_num=args.mid_num)
+    feature_dimension = train_data.shape[1]
+
+
+    if args.type == "conv":
+        train_data = np.expand_dims(train_data, axis=1)
+        label_data = np.expand_dims(label_data, axis=1)
+        net = conv_transform_net(f_dimension=feature_dimension, \
+                   mid_dimension=args.mid_dimen, mid_num=args.mid_num, \
+                   seq_length=args.seq_length)
+        if(args.test_input_mat is not None):
+            test_input = np.expand_dims(test_input, axis=1)
+            test_label = np.expand_dims(test_label, axis=1)
+    else:
+        net = transform_net(f_dimension=feature_dimension, \
+                   mid_dimension=args.mid_dimen, mid_num=args.mid_num, \
+                   seq_length=args.seq_length)
+
+    # net = transform_net(f_dimension=feature_dimension, \
+    #         mid_dimension=args.mid_dimen, mid_num=args.mid_num)
+
+    # net = conv_transform_net(f_dimension=feature_dimension, \
+    #                mid_dimension=args.mid_dimen, mid_num=args.mid_num)
     net = train(train_data, label_data, net, args.batch_size, args.epoch_num, args.learning_rate, test_input, test_label)
 
-    save_model(net, 'transform_{}-midNum_{}-midDimen_v2.pth'\
-                    .format(args.mid_num, args.mid_dimen))
+    if(args.whether_save is True):
+        save_name = args.saving_title+'transform_{}-midNum_{}-midDimen-epoch_{}.pth'.format(args.mid_num, args.mid_dimen, args.epoch_num)
+        save_model(net, save_name)
 
