@@ -19,6 +19,13 @@ from net_sphere_toy import transform_net
 
 import scipy.io as io
 
+"""
+本程序用于测试训练好的transform-network，主要通过读取args.dataset中的数据
+该数据通常为低质量的人脸数据
+args.dataset转换为特征向量
+再用训练好的transform模型(args.transform_model)对特征向量进行转换
+转换的结果特征向量保存成.mat格式文件
+"""
 
 parser = argparse.ArgumentParser(description='PyTorch sphereface lfw')
 parser.add_argument('--net','-n', default='sphere20a', type=str)

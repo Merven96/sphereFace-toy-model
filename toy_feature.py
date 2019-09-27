@@ -20,6 +20,11 @@ from matlab_cp2tform import get_similarity_transform_for_cv2
 # import net_sphere
 import net_sphere_toy
 
+"""
+本程序的作用在于将args.dataset对应的文件夹中的人脸图片依次转换成特征向量,
+并保存成.mat格式文件
+"""
+
 parser = argparse.ArgumentParser(description='PyTorch sphereface lfw')
 parser.add_argument('--net','-n', default='sphere20a', type=str)
 parser.add_argument('--dataset', type=str)

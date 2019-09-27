@@ -15,25 +15,24 @@ import numpy as np
 import zipfile
 
 from matlab_cp2tform import get_similarity_transform_for_cv2
-from net_sphere_toy import transform_net
 import net_sphere_toy
 
 import time
 import sys
+sys.path.insert(0, "../")
 from datasets import ImageDataset_two_dir_with_label
-"""
-主要用于可视化transform network在toy-model上的效果
-"""
 
 parser = argparse.ArgumentParser(description='PyTorch sphereface')
 parser.add_argument('--net','-n', default='sphere20a', type=str)
 parser.add_argument('--model_file', type=str, default='./toy_model/sphere_20a_100_toy.pth')
+parser.add_argument('--lr_dataset', default='../../../data/CASIA_ALIGN.zip', type=str)
 parser.add_argument('--dataset_name_hr', type=str, default="../../../data/CASIA_10_train.zip", help='zip-file of hr dataset')
+parser.add_argument('--dataset_name_lr', type=str, default="../../../data/CASIA_ALIGN.zip", help='zip-file of the lr dataset')
+parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--batch_size', default=32, type=int, help='')
+parser.add_argument('--n_cpu', type=int, default=1, help='number of cpu threads to use during batch generation')
 parser.add_argument('--landmark', type=str, default="./data/casia_landmark.txt")
 parser.add_argument("--use_gpu", type=str, default='1')
-parser.add_argument('--mid_num', type=int, default=4)
-parser.add_argument('--mid_dimen', type=int, default=4)
 
 
 args = parser.parse_args()
@@ -263,9 +262,7 @@ def generator_numpy_dict_from_file(landmark, zfile, class_num, net, whether_resi
     for i in range(class_num):
         # print("test: original & downsize:", np.shape(tensor_dict[i]))
         tensor_i = torch.from_numpy(tensor_dict[i]).type(torch.FloatTensor).cuda()
-        print("test:", tensor_i.size())
         feature = net(tensor_i)
-        print("test:", feature.size())
         feature = feature.cpu()
         tensor_dict[i] = feature.detach().numpy()
     return picked_dict, tensor_dict
@@ -287,21 +284,17 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     plt.figure()
     
-    
-
-    # print(net)
     picked_dict, tensor_dict = generator_numpy_dict_from_file(\
                                   args.landmark, zfile, class_num, net)
-    print("test:")
     for i in range(class_num):
         a, b = np.shape(tensor_dict[i])
-        print(np.shape(tensor_dict[i]))
         for j in range(a):
             plt.plot(tensor_dict[i][j, 0], tensor_dict[i][j, 1],  color=color_param[i], marker='.')
     
     
-    resize_factor_list = [4]
-    # resize_factor_list = [4, 7, 10]
+    resize_factor_list = [4, 6, 8]
+    resize_factor_list = [4, 7, 10]
+    # resize_factor_list = [4, 5, 6, 7, 8, 9, 10]
     for fig, factor in enumerate(resize_factor_list):
         tensor_dict_resize = generator_numpy_dict_from_file(\
                                args.landmark, zfile, class_num, net,\
@@ -321,33 +314,61 @@ if __name__ == "__main__":
                 plt.plot(tensor_dict_resize[i][j, 0], tensor_dict_resize[i][j, 1],  color=color_param_mark[i], marker='.')
     
     
+   #  plt.figure()
     plt.subplot(221)
     for i in range(class_num):
         a, b = np.shape(tensor_dict[i])
         for j in range(a):
             plt.plot(tensor_dict[i][j, 0], tensor_dict[i][j, 1],  color=color_param[i], marker='.')
-
-
-    transform_net = transform_net(f_dimension=2, \
-            mid_dimension=args.mid_dimen, mid_num=args.mid_num)
-
-    plt.subplot(223)
-    for i in range(class_num):
-        a, b = np.shape(tensor_dict[i])
-        for j in range(a):
-            plt.plot(tensor_dict[i][j, 0], tensor_dict[i][j, 1],  color=color_param[i], marker='.')
-
-    transform_dict = {}
-    for i in range(class_num):
-        tensor_i = torch.from_numpy(tensor_dict[i]).type(torch.FloatTensor)# .cuda()
-        feature = transform_net(tensor_i)
-        feature = feature.cpu()
-        transform_dict[i] = feature.detach().numpy()
-    for i in range(class_num):
-        a, b = np.shape(tensor_dict[i])
-        for j in range(a):
-            plt.plot(tensor_dict[i][j, 0], tensor_dict[i][j, 1],  color=color_param_mark[i], marker='.')
-        
-
-
+    
     plt.show()
+    
+
+#     # 下面对图像添加噪声
+# 
+#     noise_prob = [0.001, 0.005, 0.01, 0.02, 0.03, 0.05]
+#     for fig, prob in enumerate(noise_prob):
+#         _, feature_noise = generator_noisy_dict_from_file(file_path, \
+#                             zfile, class_num, net, prob)
+#         # feature_noise, img_cv, img_noise, _ = add_noise(\
+#         #                                      file_path, zfile, prob)
+#         fig_num = 220 + fig + 2
+#         plt.subplot(fig_num)
+#         # 先画出原始的点云
+#         for i in range(class_num): 
+#             a, b = np.shape(tensor_dict[i])
+#             for j in range(a):
+#                 plt.plot(tensor_dict[i][j, 0], tensor_dict[i][j, 1],  color=color_param[i], marker='.')
+# 
+#         # 再画出新的点云
+#         for i in range(class_num):
+#             a, b = np.shape(feature_noise[i])
+#             for j in range(a):
+#                 plt.plot(feature_noise[i][j, 0], feature_noise[i][j, 1],  color=color_param_mark[i], marker='.')
+# 
+#         # plt.plot(feature_noise[0], feature_noise[1], color=color_param[picked_i], marker='v', markersize=i+3)
+#     plt.show()
+    # 
+    # 接下来画关于噪声的图（椒盐噪声）
+    # # 对某个类，随机选一张图片进行测试:2/4/6倍降采样，不同程度的加噪
+    # picked_list = [3, 2, 5, 6]
+    # picked_i_image = 7  # 选择第7张图片
+    # 
+    # 
+    # for index, picked_i in enumerate(picked_list):
+    #     special_color = color_param_mark[picked_i]
+    #     file_path = picked_dict[picked_i][picked_i_image]
+    #     feature = tensor_dict[picked_i][picked_i_image, :]
+    #     # plt.plot(feature[0], feature[1],  color=color_param[picked_i], \
+    #     #          marker='*', markersize=special_size+show_easy) #星标original
+    #     plt.plot(feature[0], feature[1],  color=special_color, \
+    #              marker='*', markersize=special_size+show_easy) #星标original
+    #     
+    #     for downsample_factor in [2, 3, 4, 6, 8]:
+    #         feature_down, img_cv, img_downsample, _ = down_sample(file_path, zfile, downsample_factor, net)
+    #         special_size = 1.5*downsample_factor
+    #     
+    #         # 将处理后的图像进行新的标记
+    #         plt.plot(feature_down[0], feature_down[1],  color=special_color, \
+    #                  marker='+', markersize=special_size+show_easy)
+    #     
