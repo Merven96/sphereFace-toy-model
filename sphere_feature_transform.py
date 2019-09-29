@@ -21,16 +21,18 @@ import scipy.io as io
 
 """
 本程序用于测试训练好的transform-network，主要通过读取args.dataset中的数据
-该数据通常为低质量的人脸数据
-args.dataset转换为特征向量
-再用训练好的transform模型(args.transform_model)对特征向量进行转换
-转换的结果特征向量保存成.mat格式文件
+该数据通常为低质量的人脸数据,且已经经过剪裁
+args.dataset转换为特征向量(通常为LFW)
+用transform network对特征向量进行变换
+最后按照BLUFR格式存储mat文件
 """
 
 parser = argparse.ArgumentParser(description='PyTorch sphereface lfw')
 parser.add_argument('--net','-n', default='sphere20a', type=str)
 parser.add_argument('--dataset', default='../PyTorch-GAN/data/lfw_dataset/data_align/inter_lfw.zip', type=str)
-parser.add_argument('--landmark', default='../PyTorch-GAN/implementations/git_srgan/sphereface_pytorch/data/BLUFR_image_list.txt')
+parser.add_argument('--lfw_landmark', default='../PyTorch-GAN/implementations/git_srgan/sphereface_pytorch/data/BLUFR_image_list.txt')
+parser.add_argument('--BLUFR', default='../PyTorch-GAN/implementations/git_srgan/sphereface_pytorch/data/BLUFR_image_list.txt')
+
 parser.add_argument('--model','-m', default='../PyTorch-GAN/implementations/git_srgan/sphereface_pytorch/model/sphere20a_20171020.pth', type=str)
 parser.add_argument('--batch_size', type=int, default=3)
 parser.add_argument('--use_gpu', type=str, default='0', help='gpu')
@@ -60,7 +62,7 @@ transform_net = transform_net(f_dimension=args.feature_dimen, \
 
 zfile = zipfile.ZipFile(args.dataset)
 landmark = {}
-with open(args.landmark) as f:
+with open(args.BLUFR) as f:
     landmark_lines = f.readlines()
 num_person = len(landmark_lines)  # number of the total images
 
