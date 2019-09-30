@@ -23,6 +23,7 @@ def parameter():
     parser.add_argument('--mid_num', type=int, default=4)
     parser.add_argument('--mid_dimen', type=int, default=4)
 
+    parser.add_argument('--whether_testset', type=bool, default=False)
     parser.add_argument('--test_input_mat', type=str, default=None)
     parser.add_argument('--test_label_mat', type=str, default=None)
     parser.add_argument('--whether_save', type=bool, default=False)
@@ -157,8 +158,7 @@ if __name__ == "__main__":
             test_label = np.expand_dims(test_label, axis=1)
     else:
         net = transform_net(f_dimension=feature_dimension, \
-                   mid_dimension=args.mid_dimen, mid_num=args.mid_num, \
-                   seq_length=args.seq_length)
+                   mid_dimension=args.mid_dimen, mid_num=args.mid_num)
 
     # net = transform_net(f_dimension=feature_dimension, \
     #         mid_dimension=args.mid_dimen, mid_num=args.mid_num)
