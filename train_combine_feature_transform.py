@@ -37,7 +37,7 @@ def parameter():
     return parser
 
 
-def train(train_data_mat_list, label_data_mat_list, net, batch_size, epoch_num, lr=0.001, test_input=None, test_label=None):
+def train(train_data_mat_list, label_data_mat, net, batch_size, epoch_num, lr=0.001, test_input=None, test_label=None):
     loss_fn = torch.nn.MSELoss()
     # loss_fn = torch.nn.MSELoss(size_average=False)
     optimizer = torch.optim.Adam(net.parameters(), lr=lr)
@@ -50,8 +50,9 @@ def train(train_data_mat_list, label_data_mat_list, net, batch_size, epoch_num, 
     net.train()
     train_loss = 0
 
-    data_num = np.shape(train_data_mat)[0]
-    batch_num = int(data_num / batch_size)
+    dataset_num = len(train_data_mat_list)
+    data_num = np.shape(train_data_mat_list[0])[0]
+    batch_num = int(dataset_num * data_num / batch_size)
 
     if test_input is not None and test_label is not None:
         test_input = torch.autograd.Variable(torch.from_numpy(test_input))
@@ -59,20 +60,20 @@ def train(train_data_mat_list, label_data_mat_list, net, batch_size, epoch_num, 
         
 
     for epoch in range(epoch_num):
-        train_data_list_shuffle, label_data_list_shuffle = combine_and_shuffle_diff_set(train_data_mat_list, label_data_mat_list)
+        train_data_list_shuffle, label_data_shuffle = combine_and_shuffle_diff_set(train_data_mat_list, label_data_mat)
 
         if epoch >0 and epoch % 5 == 0:
             lr = 0.1 * lr
             optimizer = torch.optim.Adam(net.parameters(), lr=lr)
 
         for i in range(batch_num):
-            batch_end = i*batch_size + batch_size
+            # batch_end = i*batch_size + batch_size
 
+            train_batch, label_batch = get_batch_from_different_set(train_data_list_shuffle, label_data_shuffle, batch_size)
+            # print("test: ", np.shape(train_batch), np.shape(label_batch))
 
-            train_batch, label_batch = get_batch_from_different_set(train_mat_list_shuffle, test_mat_list_shuffle, batch_size)
-
-            train_batch = torch.autograd.Variable(train_batch)
-            label_batch = torch.autograd.Variable(test_batch)
+            train_batch = torch.autograd.Variable(torch.from_numpy(train_batch))
+            label_batch = torch.autograd.Variable(torch.from_numpy(label_batch))
            
 
             # if batch_end < train_data.shape[0]:
@@ -105,6 +106,8 @@ def train(train_data_mat_list, label_data_mat_list, net, batch_size, epoch_num, 
                     test_loss = loss_fn(test_output.float(), \
                                         test_label.float())        
                     print("start test-loss: {}".format(test_loss.item()))
+            else:
+                print("epoch-{}  {}/{} loss: {} ".format(epoch, i, batch_num, train_loss.item()))
 
         if test_input is not None and test_label is not None:
                 test_output = net(test_input)
@@ -131,45 +134,45 @@ def combine_and_shuffle(train_data_mat, label_data_mat):
     return train_data_mat, label_data_mat
 
 
-def combine_and_shuffle_diff_set(input_mat_list, label_mat_list):
+def combine_and_shuffle_diff_set(input_mat_list, label_mat):
     dataset_num = len(input_mat_list)
     for i in range(dataset_num):
         if not (np.shape(input_mat_list[i])[0] == \
-                np.shape(label_mat_list[i])[0]):
+                np.shape(label_mat)[0]):
+            print(np.shape(input_mat_list[i]), np.shape(label_mat))
             print("error")
             return
     permutation = np.random.permutation(input_mat_list[0].shape[0])
+    label_mat = label_mat[permutation, :]
     for i in range(dataset_num):
         input_mat_list[i] = input_mat_list[i][permutation, :]
-        label_mat_list[i] = label_mat_list[i][permutation, :]
-    return input_mat_list, label_mat_list
+    return input_mat_list, label_mat
 
 
 
-def get_batch_from_different_set(train_mat_list, test_mat_list, batch_size):
+def get_batch_from_different_set(train_mat_list, label_mat, batch_size):
     dataset_num = len(train_mat_list)
-    if !(batch_size % dataset_num == 0):
+    if not(batch_size % dataset_num == 0):
         print("ERROR: the batch_size is not suitable")
         return None
 
     # 确定从每个dataset-mat中取多少条向量
-    num_per_set = batch_size / dataset_num
+    num_per_set = int(batch_size / dataset_num)
     data_left = train_mat_list[0].shape[0]
     if data_left < num_per_set:
         num_per_set = dataleft
 
+    # print("test:", np.shape(train_mat_list), type(num_per_set), num_per_set)
     train_batch = train_mat_list[0][0:num_per_set, :]
     train_mat_list[0] = np.delete(train_mat_list[0], range(num_per_set), axis=0)
-    label_batch = test_mat_list[0][0:num_per_set, :]
-    test_mat_list[0] = np.delete(test_mat_list[0], range(num_per_set), axis=0)
+    label_batch = label_mat[0:num_per_set, :]
     for i in range(dataset_num-1):
         train_batch = np.vstack((train_batch, \
                                  train_mat_list[i+1][0:num_per_set, :]))
         train_mat_list[i+1] = np.delete(train_mat_list[i+1], range(num_per_set), axis=0)
+        label_batch = np.vstack((label_batch, label_mat[0:num_per_set, :]))
 
-        label_batch = np.vstack((test_batch, \
-                                 test_mat_list[i+1][0:num_per_set, :]))
-        test_mat_list[i+1] = np.delete(test_mat_list[i+1], range(num_per_set), axis=0)
+    label_mat = np.delete(label_mat, range(num_per_set), axis=0)
 
     return train_batch, label_batch
         
@@ -256,8 +259,9 @@ if __name__ == "__main__":
                    mid_dimension=args.mid_dimen, mid_num=args.mid_num)
 
     # net = train(train_data, label_data, net, args.batch_size, args.epoch_num, args.learning_rate, test_input, test_label)
+    net = train(train_data, label_data, net, args.batch_size, args.epoch_num, args.learning_rate)
 
-    # if(args.whether_save is True):
-    #     save_name = args.saving_title+'transform_{}-midNum_{}-midDimen-epoch_{}.pth'.format(args.mid_num, args.mid_dimen, args.epoch_num)
-    #     save_model(net, save_name)
+    if(args.whether_save is True):
+        save_name = args.saving_title+'transform_{}-midNum_{}-midDimen-epoch_{}.pth'.format(args.mid_num, args.mid_dimen, args.epoch_num)
+        save_model(net, save_name)
 
