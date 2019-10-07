@@ -69,8 +69,9 @@ def train(train_data_mat_list, label_data_mat, net, batch_size, epoch_num, lr=0.
         for i in range(batch_num):
             # batch_end = i*batch_size + batch_size
 
-            train_batch, label_batch = get_batch_from_different_set(train_data_list_shuffle, label_data_shuffle, batch_size)
-            # print("test: ", np.shape(train_batch), np.shape(label_batch))
+            train_batch, label_batch, train_data_list_shuffle, label_data_shuffle  = get_batch_from_different_set(train_data_list_shuffle, label_data_shuffle, batch_size)
+
+            # print("test: ", np.shape(train_data_list_shuffle[0]), np.shape(label_data_shuffle))
 
             train_batch = torch.autograd.Variable(torch.from_numpy(train_batch))
             label_batch = torch.autograd.Variable(torch.from_numpy(label_batch))
@@ -97,7 +98,7 @@ def train(train_data_mat_list, label_data_mat, net, batch_size, epoch_num, lr=0.
                         test_loss_i = loss_fn(test_output_i.float(), \
                                         test_label.float())        
                         print("test-set {} : {}".format(test_i, test_loss_i))
-            else:
+            elif(i % 10 == 0):
                 print("epoch-{}  {}/{} loss: {} ".format(epoch, i, batch_num, train_loss.item()))
 
 
@@ -123,9 +124,11 @@ def combine_and_shuffle(train_data_mat, label_data_mat):
         return
 
     permutation = np.random.permutation(train_data_mat.shape[0])
-    train_data_mat = train_data_mat[permutation, :]
-    label_data_mat = label_data_mat[permutation, :]
-    return train_data_mat, label_data_mat
+    train_data_mat = train_data_mat.copy()
+    label_data_mat = label_data_mat.copy()
+    train_data_mat_result = train_data_mat[permutation, :]
+    label_data_mat_result = label_data_mat[permutation, :]
+    return train_data_mat_result, label_data_mat_result
 
 
 def combine_and_shuffle_diff_set(input_mat_list, label_mat):
@@ -137,10 +140,12 @@ def combine_and_shuffle_diff_set(input_mat_list, label_mat):
             print("error")
             return
     permutation = np.random.permutation(input_mat_list[0].shape[0])
-    label_mat = label_mat[permutation, :]
+    label_mat_shuffle = label_mat[permutation, :].copy()
+    input_mat_list_shuffle = []
     for i in range(dataset_num):
-        input_mat_list[i] = input_mat_list[i][permutation, :]
-    return input_mat_list, label_mat
+        # input_mat_list_shuffle[i] = input_mat_list[i].copy()
+        input_mat_list_shuffle.append(input_mat_list[i][permutation, :].copy())
+    return input_mat_list_shuffle, label_mat_shuffle
 
 
 
@@ -166,9 +171,11 @@ def get_batch_from_different_set(train_mat_list, label_mat, batch_size):
         train_mat_list[i+1] = np.delete(train_mat_list[i+1], range(num_per_set), axis=0)
         label_batch = np.vstack((label_batch, label_mat[0:num_per_set, :]))
 
+    # print("test in get-batch:", np.shape(label_mat))
     label_mat = np.delete(label_mat, range(num_per_set), axis=0)
+    # print("test in get-batch:", np.shape(label_mat))
 
-    return train_batch, label_batch
+    return train_batch, label_batch, train_mat_list, label_mat
         
 
 def save_model(model, filename):
