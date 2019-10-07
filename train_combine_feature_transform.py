@@ -35,7 +35,7 @@ def parameter():
     return parser
 
 
-def train(train_data_mat_list, label_data_mat, net, batch_size, epoch_num, lr=0.001, test_input_mat_list=None, test_label_mat=None):
+def train(train_data_mat_list, label_data_mat, net, batch_size, epoch_num, lr=0.001, test_input_mat_list=None, test_label_mat=None, whether_save=False, saving_title=None):
     loss_fn = torch.nn.MSELoss()
     # loss_fn = torch.nn.MSELoss(size_average=False)
     optimizer = torch.optim.Adam(net.parameters(), lr=lr)
@@ -62,13 +62,15 @@ def train(train_data_mat_list, label_data_mat, net, batch_size, epoch_num, lr=0.
     for epoch in range(epoch_num):
         train_data_list_shuffle, label_data_shuffle = combine_and_shuffle_diff_set(train_data_mat_list, label_data_mat)
 
-        if epoch >0 and epoch % 5 == 0:
+        if epoch >0 and epoch % 2 == 0:
             lr = 0.1 * lr
             optimizer = torch.optim.Adam(net.parameters(), lr=lr)
 
         for i in range(batch_num):
-            # batch_end = i*batch_size + batch_size
 
+            # if i>10:
+            #     break;
+            
             train_batch, label_batch, train_data_list_shuffle, label_data_shuffle  = get_batch_from_different_set(train_data_list_shuffle, label_data_shuffle, batch_size)
 
             # print("test: ", np.shape(train_data_list_shuffle[0]), np.shape(label_data_shuffle))
@@ -114,6 +116,11 @@ def train(train_data_mat_list, label_data_mat, net, batch_size, epoch_num, lr=0.
                 test_loss_i = loss_fn(test_output_i.float(), \
                                 test_label.float())        
                 print("test-set {} : {}".format(test_i, test_loss_i))
+
+        # save the model for every epoch
+        if(whether_save is True and saving_title is not None):
+            save_name = saving_title + '-epoch_{}.pth'.format(epoch)
+            save_model(net, save_name)
 
     return net
 
@@ -260,7 +267,9 @@ if __name__ == "__main__":
         net = transform_net(f_dimension=feature_dimension, \
                    mid_dimension=args.mid_dimen, mid_num=args.mid_num)
 
-    net = train(train_data, label_data, net, args.batch_size, args.epoch_num, args.learning_rate, test_input_mat_list, test_label_mat)
+    save_name = args.saving_title + args.type  +'transform_{}-midNum_{}-midDimen'.format(args.mid_num, args.mid_dimen)
+
+    net = train(train_data, label_data, net, args.batch_size, args.epoch_num, args.learning_rate, test_input_mat_list, test_label_mat, args.whether_save, save_name)
     # net = train(train_data, label_data, net, args.batch_size, args.epoch_num, args.learning_rate)
 
     if(args.whether_save is True):
