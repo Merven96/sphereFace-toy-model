@@ -73,6 +73,7 @@ def train(train_data_mat_list, label_data_mat, net, batch_size, epoch_num, lr=0.
             
             train_batch, label_batch, train_data_list_shuffle, label_data_shuffle  = get_batch_from_different_set(train_data_list_shuffle, label_data_shuffle, batch_size)
 
+            # print("test: ", np.shape(train_batch), np.shape(label_batch))
             # print("test: ", np.shape(train_data_list_shuffle[0]), np.shape(label_data_shuffle))
 
             train_batch = torch.autograd.Variable(torch.from_numpy(train_batch))
@@ -181,6 +182,11 @@ def get_batch_from_different_set(train_mat_list, label_mat, batch_size):
     # print("test in get-batch:", np.shape(label_mat))
     label_mat = np.delete(label_mat, range(num_per_set), axis=0)
     # print("test in get-batch:", np.shape(label_mat))
+
+    # shuffle data in each batch
+    permutation = np.random.permutation(train_batch.shape[0])
+    train_batch = train_batch[permutation, :]
+    label_batch = label_batch[permutation, :]
 
     return train_batch, label_batch, train_mat_list, label_mat
         

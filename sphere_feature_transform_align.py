@@ -44,19 +44,18 @@ def alignment(src_img,src_pts):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch sphereface lfw')
     parser.add_argument('--net','-n', default='sphere20a', type=str)
-    parser.add_argument('--dataset', default='../PyTorch-GAN/data/lfw_dataset/data_align/inter_lfw.zip', type=str)
+    parser.add_argument('--dataset', default='../PyTorch-GAN/data/lfw_dataset/lfw_resize4_without_align.zip', type=str)
     parser.add_argument('--lfw_landmark', default='../PyTorch-GAN/implementations/git_srgan/sphereface_pytorch/data/lfw_landmark.txt')
     parser.add_argument('--BLUFR', default='../PyTorch-GAN/implementations/git_srgan/sphereface_pytorch/data/BLUFR_image_list.txt')
     
     parser.add_argument('--model','-m', default='../PyTorch-GAN/implementations/git_srgan/sphereface_pytorch/model/sphere20a_20171020.pth', type=str)
     parser.add_argument('--batch_size', type=int, default=3)
-    parser.add_argument('--use_gpu', type=str, default='0', help='gpu')
+    parser.add_argument('--use_gpu', type=str, default='1', help='gpu')
     
     parser.add_argument('--mid_num', type=int, default=6)
     parser.add_argument('--mid_dimen', type=int, default=512)
     parser.add_argument('--feature_dimen', type=int, default=512)
     parser.add_argument('--transform_model', type=str, default='./result/high_dimension_result/hightransform_6-midNum_512-midDimen-epoch_20.pth')
-    
     parser.add_argument('--save_name', type=str, default="transform_lfw_feature.mat")
     
     args = parser.parse_args()
