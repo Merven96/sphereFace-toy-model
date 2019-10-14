@@ -16,11 +16,11 @@ def parameter():
     parser = argparse.ArgumentParser(description="Transformer")
     parser.add_argument('--train_data_mat', type=str, default="./mat_file/toy_model/train_without_test/toy_feature_train.mat")
     parser.add_argument('--label_data_mat', type=str, default="./mat_file/toy_model/train_without_test/toy_feature_train_lr.mat")
-    parser.add_argument('--use_gpu', type=str, default='0')
+    parser.add_argument('--use_gpu', type=str, default='1')
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--epoch_num', type=int, default=10)
     parser.add_argument('--learning_rate', type=float, default=0.01)
-    parser.add_argument('--mid_num', type=int, default=4)
+    parser.add_argument('--mid_num', type=int, default=6)
     parser.add_argument('--mid_dimen', type=int, default=4)
 
     parser.add_argument('--whether_testset', type=bool, default=False)

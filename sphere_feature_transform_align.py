@@ -124,10 +124,9 @@ if __name__ == "__main__":
         img_list = Variable(torch.from_numpy(img_list).float(),volatile=True).cuda()
         output = net(img_list)
         output = output.to('cpu')
-        # print("test:", np.shape(output))
     
-        if transform_net is not None:
-            output = transform_net(output)
+        # if transform_net is not None:
+        #     output = transform_net(output)
     
         output = output.detach().numpy()
         feature_list.append(output)
